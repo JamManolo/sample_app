@@ -54,6 +54,32 @@ describe UsersController do
                                            :content => "Next")
       end
     end
+    
+    describe "as a non-admin user" do
+
+      before(:each) do
+        admin = Factory(:user, :email => "nonadmin@example.com", :admin => false)
+        test_sign_in(admin)
+      end
+
+      it "should not have a delete link for each user" do
+        get :index
+        response.should_not have_selector("a", :href => "/users/1", :content => "delete")
+      end
+    end
+    
+    describe "as an admin user" do
+
+      before(:each) do
+        admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(admin)
+      end
+
+      it "should have a delete link for each user" do
+        get :index
+        response.should have_selector("a", :href => "/users/1", :content => "delete")
+      end
+    end
   end
 
   describe "GET 'show'" do
@@ -86,9 +112,27 @@ describe UsersController do
       get :show, :id => @user
       response.should have_selector("h1>img", :class => "gravatar")
     end
+    
+    it "should show the user's microposts" do
+      mp1 = Factory(:micropost, :user => @user, :content => "Foo bar")
+      mp2 = Factory(:micropost, :user => @user, :content => "Baz quux")
+      get :show, :id => @user
+      response.should have_selector("span.content", :content => mp1.content)
+      response.should have_selector("span.content", :content => mp2.content)
+    end
   end
 
   describe "GET 'new'" do
+  
+    describe "failure" do
+      it "should not be signed in" do
+        @user = Factory(:user)
+        test_sign_in(@user)
+        get 'new'
+        response.should redirect_to(root_path)
+      end
+    end
+    
     it "should be successful" do
       get 'new'
       response.should be_success
@@ -128,6 +172,13 @@ describe UsersController do
       before(:each) do
         @attr = { :name => "", :email => "", :password => "",
                   :password_confirmation => "" }
+      end
+      
+      it "should not be signed in" do
+        @user = Factory(:user)
+        test_sign_in(@user)
+        post :create, :user => @attr
+        response.should redirect_to(root_path)
       end
 
       it "should not create a user" do
@@ -318,7 +369,7 @@ describe UsersController do
         admin = Factory(:user, :email => "admin@example.com", :admin => true)
         test_sign_in(admin)
       end
-
+      
       it "should destroy the user" do
         lambda do
           delete :destroy, :id => @user
@@ -328,6 +379,21 @@ describe UsersController do
       it "should redirect to the users page" do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
+      end
+    end
+    
+    describe "as an admin user" do
+
+      before(:each) do
+        admin = Factory(:user, :email => "example@railstutorial.org", :admin => true)
+        test_sign_in(admin)
+        @user = admin
+      end
+              
+      it "should not destroy self" do
+        lambda do
+          delete :destroy, :id => @user
+        end.should_not change(User, :count)
       end
     end
   end
