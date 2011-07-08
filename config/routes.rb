@@ -1,8 +1,20 @@
 SampleApp::Application.routes.draw do
-  resources :users
-  resources :sessions,   :only => [:new, :create, :destroy]
-  resources :microposts, :only => [:create, :destroy]
-  
+
+  # I prefer the match solution to exercise 11.5.7, but I guess the recommended
+  # approach of nested routes ties in to the the implementation of 'following users'
+  # Anyway, the first one found (in this case, match) is used to resolve the route
+  match "/users/:id/microposts", :to => "users#show"
+
+  resources :users do
+    member do
+      get :following, :followers
+    end
+    resources :microposts, :only => :index
+  end
+  resources :sessions,      :only => [:new, :create, :destroy]
+  resources :microposts,    :only => [:create, :destroy, :index]
+  resources :relationships, :only => [:create, :destroy]
+    
   match '/signup',  :to => 'users#new'
   match '/signin',  :to => 'sessions#new'
   match '/signout', :to => 'sessions#destroy'
@@ -10,7 +22,7 @@ SampleApp::Application.routes.draw do
   match '/contact', :to => 'pages#contact'
   match '/about',   :to => 'pages#about'
   match '/help',    :to => 'pages#help'
-
+  
   get "pages/home"
   get "pages/contact"
   get "pages/about"
